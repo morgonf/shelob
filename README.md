@@ -40,6 +40,8 @@ all options:
     output directory (default "fuzzer_output")
 -password string
     password (auth)
+-rps int
+    requests per second limit (0 means no limit)
 -spec string
     openapi file specification (Required)
 -token string

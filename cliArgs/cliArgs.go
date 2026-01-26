@@ -10,7 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func ParseCliArgs() (string, string, string, string, string, string, string, bool, time.Duration, []string, bool) {
+func ParseCliArgs() (string, string, string, string, string, string, string, bool, time.Duration, []string, bool, int) {
 	spec := flag.String("spec", "", "OpenAPI file specification (JSON or YAML format, Required)")
 	targetURL := flag.String("url", "", "target URL")
 	username := flag.String("user", "", "username (Basic auth)")
@@ -21,6 +21,7 @@ func ParseCliArgs() (string, string, string, string, string, string, string, boo
 	detailedOutput := flag.Bool("detailed", false, "include successful test cases")
 	duration := flag.Duration("duration", 3600000000000, "time duration of fuzzing")
 	enableDebug := flag.Bool("debug", false, "enable debug logs (default: true)")
+	rps := flag.Int("rps", 0, "requests per second limit (0 means no limit)")
 
 	flag.Parse()
 
@@ -44,7 +45,7 @@ func ParseCliArgs() (string, string, string, string, string, string, string, boo
 
 	log.Info("[+++] cli arguments are parsed")
 
-	return *spec, *targetURL, *username, *password, *apikey, *token, *outputDir, *detailedOutput, *duration, extraArgs, *enableDebug
+	return *spec, *targetURL, *username, *password, *apikey, *token, *outputDir, *detailedOutput, *duration, extraArgs, *enableDebug, *rps
 }
 
 // validateSpecFileExtension checks if the spec file has a valid extension
