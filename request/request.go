@@ -91,23 +91,42 @@ func CreateRequest(ctx context.Context, openapiData *openapi3.T, router *routers
 			log.Debugf("request.go	Content type: %s, Body payload length: %d", contentType, bodyPayload.Len())
 			security.CreateSecurityParams(operation, securityScheme, *queryParams, headerParams, cookieParams, username, password, apikey, token)
 
-			// Construct the full URL
-			// Avoid double slashes by ensuring basePath ends with / and path starts with /
-			// but only one slash is present in the final path
+			// Construct the full URL and determine path for path parameters
+			// If targetURL is provided via CLI, use it; otherwise use server URL from spec
+			var fullURL string
 			var fullPath string
-			if basePath == "/" {
-				fullPath = path
-			} else {
-				// Ensure basePath ends with / and path doesn't start with /
-				cleanBasePath := strings.TrimSuffix(basePath, "/")
-				cleanPath := strings.TrimPrefix(path, "/")
-				if cleanPath == "" {
-					fullPath = cleanBasePath
+
+			if targetURL != "" {
+				// Avoid double slashes by ensuring basePath ends with / and path starts with /
+				// but only one slash is present in the final path
+				if basePath == "/" {
+					fullPath = path
 				} else {
-					fullPath = cleanBasePath + "/" + cleanPath
+					// Ensure basePath ends with / and path doesn't start with /
+					cleanBasePath := strings.TrimSuffix(basePath, "/")
+					cleanPath := strings.TrimPrefix(path, "/")
+					if cleanPath == "" {
+						fullPath = cleanBasePath
+					} else {
+						fullPath = cleanBasePath + "/" + cleanPath
+					}
+				}
+				fullURL = targetURL + fullPath
+			} else {
+				// Use the server URL from the spec directly
+				if openapiData.Servers != nil && len(openapiData.Servers) > 0 && openapiData.Servers[0] != nil {
+					serverURL := openapiData.Servers[0].URL
+					// Ensure the server URL doesn't end with a slash before appending the path
+					serverURL = strings.TrimSuffix(serverURL, "/")
+					fullURL = serverURL + path
+					// For path parameters, we just use the path part
+					fullPath = path
+				} else {
+					// Fallback if no server URL is defined in the spec
+					log.Errorf("request.go	No server URL defined in spec and no target URL provided via CLI for path: %s", path)
+					continue
 				}
 			}
-			fullURL := targetURL + fullPath
 
 			httpRequest, err := http.NewRequest(method, fullURL, bodyPayload)
 			if err != nil {
@@ -138,8 +157,22 @@ func CreateRequest(ctx context.Context, openapiData *openapi3.T, router *routers
 				httpRequest.Header.Set("Content-Type", contentType)
 			}
 
+			// Determine the path for routing purposes
+			var routePath string
+			if targetURL != "" {
+				routePath = fullPath
+			} else {
+				// Extract path from the full URL when using server URL from spec
+				parsedURL, err := url.Parse(fullURL)
+				if err != nil {
+					log.Errorf("request.go	Failed to parse full URL for routing: %v", err)
+					continue
+				}
+				routePath = parsedURL.Path
+			}
+
 			// Find and validate route - use original path before parameter substitution
-			originalRequest, err := http.NewRequest(method, httpRequest.URL.Scheme+"://"+httpRequest.URL.Host+fullPath, bodyPayload)
+			originalRequest, err := http.NewRequest(method, httpRequest.URL.Scheme+"://"+httpRequest.URL.Host+routePath, bodyPayload)
 			if err != nil {
 				log.Error("request.go	Failed to create original http request for routing: ", err)
 				continue
@@ -151,17 +184,17 @@ func CreateRequest(ctx context.Context, openapiData *openapi3.T, router *routers
 				originalRequest.Header[k] = v
 			}
 
-			log.Debugf("request.go	Attempting to find route for %s %s", method, fullPath)
+			log.Debugf("request.go	Attempting to find route for %s %s", method, routePath)
 			route, pathParamsVal, err := (*router).FindRoute(originalRequest)
 			if err != nil {
-				log.Debugf("request.go	Skipping route %s %s: %v", method, fullPath, err)
+				log.Debugf("request.go	Skipping route %s %s: %v", method, routePath, err)
 				continue
 			}
-			log.Debugf("request.go	Route found for %s %s", method, fullPath)
+			log.Debugf("request.go	Route found for %s %s", method, routePath)
 
 			// Don't skip based on validation errors - we want to fuzz even invalid requests
 			requestValidationInput, _ := ValidateRequest(httpRequest, pathParamsVal, queryParams, route, ctx)
-			log.Debugf("request.go	Validation completed for %s %s", method, fullPath)
+			log.Debugf("request.go	Validation completed for %s %s", method, routePath)
 
 			httpRequests = append(httpRequests, httpRequest)
 			requestsValidationInput = append(requestsValidationInput, requestValidationInput)

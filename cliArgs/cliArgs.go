@@ -2,15 +2,17 @@ package cliArgs
 
 import (
 	"flag"
+	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 )
 
 func ParseCliArgs() (string, string, string, string, string, string, string, bool, time.Duration, []string, bool) {
-	spec := flag.String("spec", "", "openapi file specification (Required)")
-	targetURL := flag.String("url", "", "target URL (Required)")
+	spec := flag.String("spec", "", "OpenAPI file specification (JSON or YAML format, Required)")
+	targetURL := flag.String("url", "", "target URL")
 	username := flag.String("user", "", "username (Basic auth)")
 	password := flag.String("password", "", "password (Basic auth)")
 	apikey := flag.String("apikey", "", "api key for auth")
@@ -22,10 +24,16 @@ func ParseCliArgs() (string, string, string, string, string, string, string, boo
 
 	flag.Parse()
 
-	if *spec == "" || *targetURL == "" {
+	if *spec == "" {
 		flag.PrintDefaults()
-		log.Fatal("Provide OpenAPI file and target URL")
+		log.Fatal("Provide OpenAPI file")
 	}
+
+	if *targetURL == "" {
+		log.Info("No target URL provided via CLI. Will attempt to use server URLs from the OpenAPI specification.")
+	}
+
+	validateSpecFileExtension(*spec)
 
 	re := regexp.MustCompile("/$")
 	if re.FindStringSubmatch(*targetURL) != nil {
@@ -37,4 +45,12 @@ func ParseCliArgs() (string, string, string, string, string, string, string, boo
 	log.Info("[+++] cli arguments are parsed")
 
 	return *spec, *targetURL, *username, *password, *apikey, *token, *outputDir, *detailedOutput, *duration, extraArgs, *enableDebug
+}
+
+// validateSpecFileExtension checks if the spec file has a valid extension
+func validateSpecFileExtension(specFile string) {
+	ext := strings.ToLower(filepath.Ext(specFile))
+	if ext != ".json" && ext != ".yaml" && ext != ".yml" {
+		log.Fatalf("Invalid spec file extension: %s. Supported formats are JSON (.json), YAML (.yaml, .yml)", ext)
+	}
 }
