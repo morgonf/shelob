@@ -17,7 +17,7 @@ import (
 func Run() {
 	Start := time.Now()
 
-	Spec, TargetURL, UserName, Password, ApiKey, Token, OutputDir, Detailed, Duration, ExtraArgs, EnableDebug := cliArgs.ParseCliArgs()
+	Spec, TargetURL, UserName, Password, ApiKey, Token, OutputDir, Detailed, Duration, ExtraArgs, EnableDebug, RPS := cliArgs.ParseCliArgs()
 
 	// Set log level based on the debug flag
 	if EnableDebug {
@@ -80,7 +80,7 @@ func Run() {
 			log.Debugf("Auth cookies count: %d", len(AuthCookies))
 		}
 
-		response.ParseResponse(*Context, Requests, RequestsValidationInput, RequestsValidationError, OutputDir, Detailed)
+		response.ParseResponse(*Context, Requests, RequestsValidationInput, RequestsValidationError, OutputDir, Detailed, RPS)
 	}
 
 	fmt.Printf("\nFuzzing completed. Total requests sent: %d\n", requestCount)

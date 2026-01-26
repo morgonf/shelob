@@ -6,12 +6,13 @@ import (
 	"net/http"
 	"shelob/logging"
 	"strings"
+	"time"
 
 	"github.com/getkin/kin-openapi/openapi3filter"
 	log "github.com/sirupsen/logrus"
 )
 
-func ParseResponse(ctx context.Context, httpRequests []*http.Request, requestsValidationInput []*openapi3filter.RequestValidationInput, requestsValidationError []*error, outputDir string, detailed bool) {
+func ParseResponse(ctx context.Context, httpRequests []*http.Request, requestsValidationInput []*openapi3filter.RequestValidationInput, requestsValidationError []*error, outputDir string, detailed bool, rps int) {
 	logging.CreateDir(outputDir)
 	log.Debugf("response.go	Total requests to send: %d", len(httpRequests))
 
@@ -20,7 +21,20 @@ func ParseResponse(ctx context.Context, httpRequests []*http.Request, requestsVa
 		return
 	}
 
+	// Initialize rate limiter if RPS is set
+	var rateLimiter *time.Ticker
+	if rps > 0 {
+		// Calculate interval in nanoseconds to avoid precision loss
+		interval := time.Second / time.Duration(rps)
+		rateLimiter = time.NewTicker(interval)
+		defer rateLimiter.Stop()
+	}
+
 	for idx := range httpRequests {
+		// Rate limiting: wait for the ticker if RPS is set
+		if rps > 0 {
+			<-rateLimiter.C
+		}
 		log.Debugf("response.go	About to send request: %s %s", httpRequests[idx].Method, httpRequests[idx].URL.String())
 		func() {
 			client := &http.Client{}
