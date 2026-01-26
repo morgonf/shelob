@@ -17,19 +17,36 @@ func ParseOpenapiSpec(spec string, targetURL string) (*context.Context, *openapi
 		log.Fatal("openapi.go	Failed to load specification from file: ", err)
 	}
 
-	// Fix empty server URLs by using the target URL from command line
-	if openapiData.Servers != nil {
-		for _, server := range openapiData.Servers {
-			if server != nil && server.URL == "" {
-				server.URL = targetURL
+	// Use target URL from CLI if provided, otherwise use server URLs from spec
+	if targetURL != "" {
+		// Override all server URLs with the target URL from command line
+		if openapiData.Servers != nil {
+			log.Infof("Overriding server URLs in spec with CLI target URL: %s", targetURL)
+			for _, server := range openapiData.Servers {
+				if server != nil {
+					server.URL = targetURL
+				}
+			}
+		} else {
+			// If no servers are defined in spec, create a default server with the target URL
+			log.Infof("No servers defined in spec, using CLI target URL: %s", targetURL)
+			openapiData.Servers = openapi3.Servers{
+				&openapi3.Server{
+					URL: targetURL,
+				},
 			}
 		}
 	} else {
-		// If no servers are defined, create a default server with the target URL
-		openapiData.Servers = openapi3.Servers{
-			&openapi3.Server{
-				URL: targetURL,
-			},
+		// Use server URLs from the spec file
+		if openapiData.Servers != nil {
+			log.Infof("Using server URLs from OpenAPI specification:")
+			for i, server := range openapiData.Servers {
+				if server != nil {
+					log.Infof("  Server %d: %s", i+1, server.URL)
+				}
+			}
+		} else {
+			log.Warn("No servers defined in the OpenAPI specification and no target URL provided via CLI")
 		}
 	}
 

@@ -17,10 +17,12 @@ Shelob is a powerful tool designed to test and validate APIs that are defined us
 ## Getting Started
 
 ### Basic usage
- 
+
 ```bash
 go run main.go -spec=**OPENAPI FILE** -url=**TARGET URL**
 ```
+
+Supported OpenAPI specification formats: JSON (.json), YAML (.yaml, .yml)
 
 ### Advanced options
 
@@ -52,7 +54,9 @@ all options:
 
 You can try Shelob using local demo (`demo` directory) or [VAmPI](https://github.com/erev0s/VAmPI).
 
-For local demo just simply run `demo/createDocker.sh`. It uses [Petstore example](https://hub.docker.com/r/swaggerapi/petstore3).The following OpenAPI specification is located in `./demo/openapi.json`
+For local demo just simply run `demo/createDocker.sh`. It uses [Petstore example](https://hub.docker.com/r/swaggerapi/petstore3). The following OpenAPI specification is located in `./demo/openapi.json`
+
+Note: Shelob supports both JSON (.json) and YAML (.yaml, .yml) OpenAPI specification formats.
 
 ## Contributing
 
