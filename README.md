@@ -41,13 +41,13 @@ all options:
 -password string
     password (auth)
 -rps int
-    requests per second limit (0 means no limit)
+    requests per second limit (default 0 means no limit)
 -spec string
     openapi file specification (Required)
 -token string
     token for bearer auth
 -url string
-    target URL (Required)
+    target URL
 -user string
     username (auth)
 ```
